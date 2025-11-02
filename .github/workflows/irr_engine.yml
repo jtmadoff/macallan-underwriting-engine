@@ -23,5 +23,5 @@ jobs:
       - name: Run IRR script
         env:
           MONDAY_API_KEY: ${{ secrets.MONDAY_API_KEY }}
-          BOARD_ID: 18320495966
+          MONDAY_BOARD_ID: ${{ secrets.MONDAY_BOARD_ID }}
         run: python scripts/irr_engine.py
