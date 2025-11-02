@@ -53,21 +53,23 @@ def main():
         "Content-Type": "application/json",
     }
 
-    # Query only for items in the specified group
+    # Query only for items in the specified group, using items_page!
     query = f"""
     query {{
       boards(ids: {board_id}) {{
         groups(ids: ["{group_id}"]) {{
           id
           title
-          items {{
-            id
-            name
-            column_values {{
+          items_page(limit: 100) {{
+            items {{
               id
-              text
-              value
-              type
+              name
+              column_values {{
+                id
+                text
+                value
+                type
+              }}
             }}
           }}
         }}
@@ -84,10 +86,10 @@ def main():
         print("No groups returned, or group missing.")
         return
     group = boards[0]["groups"][0]
-    if "items" not in group:
+    if "items_page" not in group or "items" not in group["items_page"]:
         print("No items returned for group.")
         return
-    items = group["items"]
+    items = group["items_page"]["items"]
 
     # Column IDs for required input fields
     COL_NOI                = "numeric_mkxam1rv"
