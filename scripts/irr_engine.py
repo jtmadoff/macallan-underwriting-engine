@@ -6,16 +6,24 @@ import math
 import requests
 import numpy_financial as npf
 
-def safe_number(text):
-    """Convert text to float safely; treat empty / None as 0.0"""
-    if text is None:
+def safe_number_colval(column_value):
+    """Extracts the number from a Monday.com numeric column value dict."""
+    if not column_value:
         return 0.0
-    text = str(text).strip().replace(",", "")
-    if text == "":
-        return 0.0
+    # Try value field
+    val = column_value.get("value")
+    if val:
+        try:
+            # Monday wraps numbers as a quoted string, e.g., "\"1234\""
+            val = json.loads(val)
+            return float(val)
+        except Exception:
+            pass
+    # Fallback: try parsing text field
+    text = column_value.get("text")
     try:
-        return float(text)
-    except ValueError:
+        return float(text.replace(",", "")) if text else 0.0
+    except Exception:
         return 0.0
 
 def http_post_with_retries(url, payload, headers, max_retries=5):
@@ -46,6 +54,7 @@ def main():
         "Authorization": api_key,
         "Content-Type": "application/json",
     }
+
     # Use items_page for modern Monday.com API
     query = f"""
     query {{
@@ -57,6 +66,8 @@ def main():
             column_values {{
               id
               text
+              value
+              type
             }}
           }}
         }}
@@ -74,26 +85,26 @@ def main():
     items = boards[0]["items_page"]["items"]
 
     # Use internal column IDs
-    COL_EQUITY_INVESTMENT = "text_mkx8fh02"
-    COL_YEAR_1_CF         = "text_mkx8wy34"
-    COL_YEAR_2_CF         = "text_mkx85r06"
-    COL_YEAR_3_CF         = "text_mkx853zq"
-    COL_YEAR_4_CF         = "text_mkx8cq2k"
-    COL_YEAR_5_CF         = "text_mkx8p02k"
-    COL_SALE_PROCEEDS     = "text_mkx846jm"
-    COL_IRR               = "text_mkx86wgr"
-    COL_EQUITY_MULTIPLE   = "text_mkx8xted"
+    COL_EQUITY_INVESTMENT = "numeric_mkxapdxt"
+    COL_YEAR_1_CF         = "numeric_mkxary42"
+    COL_YEAR_2_CF         = "numeric_mkxavbzw"
+    COL_YEAR_3_CF         = "numeric_mkxadz1f"
+    COL_YEAR_4_CF         = "numeric_mkxasbp9"
+    COL_YEAR_5_CF         = "numeric_mkxarrfz"
+    COL_SALE_PROCEEDS     = "numeric_mkxaaxrp"
+    COL_IRR               = "numeric_mkxav001"
+    COL_EQUITY_MULTIPLE   = "numeric_mkxag7qd"
 
     for item in items:
-        cv = {c["id"]: c.get("text") for c in item.get("column_values", [])}
+        cv_dict = {c["id"]: c for c in item.get("column_values", [])}
         try:
-            equity = abs(safe_number(cv.get(COL_EQUITY_INVESTMENT)))
-            y1 = safe_number(cv.get(COL_YEAR_1_CF))
-            y2 = safe_number(cv.get(COL_YEAR_2_CF))
-            y3 = safe_number(cv.get(COL_YEAR_3_CF))
-            y4 = safe_number(cv.get(COL_YEAR_4_CF))
-            y5 = safe_number(cv.get(COL_YEAR_5_CF))
-            sale = safe_number(cv.get(COL_SALE_PROCEEDS))
+            equity = abs(safe_number_colval(cv_dict.get(COL_EQUITY_INVESTMENT)))
+            y1 = safe_number_colval(cv_dict.get(COL_YEAR_1_CF))
+            y2 = safe_number_colval(cv_dict.get(COL_YEAR_2_CF))
+            y3 = safe_number_colval(cv_dict.get(COL_YEAR_3_CF))
+            y4 = safe_number_colval(cv_dict.get(COL_YEAR_4_CF))
+            y5 = safe_number_colval(cv_dict.get(COL_YEAR_5_CF))
+            sale = safe_number_colval(cv_dict.get(COL_SALE_PROCEEDS))
             cashflows = [-equity, y1, y2, y3, y4, y5 + sale]
             irr = npf.irr(cashflows)
             irr_value = None if irr is None or (isinstance(irr, float) and math.isnan(irr)) else irr*100.0
