@@ -80,33 +80,71 @@ def main():
         return
     items = boards[0]["items_page"]["items"]
 
-    # Use internal column IDs
-    COL_EQUITY_INVESTMENT = "numeric_mkxapdxt"
-    COL_YEAR_1_CF         = "numeric_mkxary42"
-    COL_YEAR_2_CF         = "numeric_mkxavbzw"
-    COL_YEAR_3_CF         = "numeric_mkxadz1f"
-    COL_YEAR_4_CF         = "numeric_mkxasbp9"
-    COL_YEAR_5_CF         = "numeric_mkxarrfz"
-    COL_SALE_PROCEEDS     = "numeric_mkxaaxrp"
-    COL_IRR               = "numeric_mkxav001"
-    COL_EQUITY_MULTIPLE   = "numeric_mkxag7qd"
+    # Column IDs for required input fields
+    COL_NOI                = "numeric_mkxam1rv"
+    COL_TOTAL_PROJECT_COST = "numeric_mkx8vtv"
+    COL_LOAN_AMOUNT        = "numeric_mkx856za"
+    COL_MARKET_CAP_RATE    = "numeric_mkxam49"
+    COL_EXIT_CAP_RATE      = "numeric_mkxarhhr"
+    COL_YEAR_1_CF          = "numeric_mkxary42"
+    COL_EQUITY_INVESTMENT  = "numeric_mkxapdxt"
+
+    # Column IDs for calculated outputs
+    COL_CAP_RATE           = "numeric_mkxaasdx8"
+    COL_LTV                = "numeric_mkxa901y"
+    COL_YIELD_ON_COST      = "numeric_mkxagcrj"
+    COL_SPREAD             = "numeric_mkxa1nb4"
+    COL_REVERSION_VALUE    = "numeric_mkxaacq4"
+    COL_CASH_ON_CASH       = "numeric_mkxahsqj"
+    COL_IRR                = "numeric_mkxav001"
+    COL_EQUITY_MULTIPLE    = "numeric_mkxag7qd"
 
     for item in items:
         cv_dict = {c["id"]: c for c in item.get("column_values", [])}
         try:
-            equity = abs(safe_number_colval(cv_dict.get(COL_EQUITY_INVESTMENT)))
-            y1 = safe_number_colval(cv_dict.get(COL_YEAR_1_CF))
-            y2 = safe_number_colval(cv_dict.get(COL_YEAR_2_CF))
-            y3 = safe_number_colval(cv_dict.get(COL_YEAR_3_CF))
-            y4 = safe_number_colval(cv_dict.get(COL_YEAR_4_CF))
-            y5 = safe_number_colval(cv_dict.get(COL_YEAR_5_CF))
-            sale = safe_number_colval(cv_dict.get(COL_SALE_PROCEEDS))
-            cashflows = [-equity, y1, y2, y3, y4, y5 + sale]
+            # Read all required inputs
+            noi = safe_number_colval(cv_dict.get(COL_NOI))
+            total_project_cost = safe_number_colval(cv_dict.get(COL_TOTAL_PROJECT_COST))
+            loan_amount = safe_number_colval(cv_dict.get(COL_LOAN_AMOUNT))
+            market_cap_rate = safe_number_colval(cv_dict.get(COL_MARKET_CAP_RATE))
+            exit_cap_rate = safe_number_colval(cv_dict.get(COL_EXIT_CAP_RATE))
+            year_1_cf = safe_number_colval(cv_dict.get(COL_YEAR_1_CF))
+            equity_investment = abs(safe_number_colval(cv_dict.get(COL_EQUITY_INVESTMENT)))
+
+            # Calculations
+            cap_rate = (noi / total_project_cost * 100) if total_project_cost > 0 else None
+            ltv = (loan_amount / total_project_cost * 100) if total_project_cost > 0 else None
+            yield_on_cost = (noi / total_project_cost * 100) if total_project_cost > 0 else None
+            spread = (yield_on_cost - market_cap_rate) if yield_on_cost is not None and market_cap_rate > 0 else None
+            reversion_value = (noi / (exit_cap_rate / 100)) if exit_cap_rate > 0 else None
+            cash_on_cash = (year_1_cf / equity_investment * 100) if equity_investment > 0 else None
+
+            # IRR/Equity Multiple as before
+            y1 = year_1_cf
+            y2 = safe_number_colval(cv_dict.get("numeric_mkxavbzw"))
+            y3 = safe_number_colval(cv_dict.get("numeric_mkxadz1f"))
+            y4 = safe_number_colval(cv_dict.get("numeric_mkxasbp9"))
+            y5 = safe_number_colval(cv_dict.get("numeric_mkxarrfz"))
+            sale = safe_number_colval(cv_dict.get("numeric_mkxaaxrp"))
+            cashflows = [-equity_investment, y1, y2, y3, y4, y5 + sale]
             irr = npf.irr(cashflows)
             irr_value = None if irr is None or (isinstance(irr, float) and math.isnan(irr)) else irr*100.0
-            em = sum(cashflows[1:]) / equity if equity > 0 else None
+            em = sum(cashflows[1:]) / equity_investment if equity_investment > 0 else None
 
+            # Build column_values for mutation
             column_values = {}
+            if cap_rate is not None:
+                column_values[COL_CAP_RATE] = f"{cap_rate:.2f}"
+            if ltv is not None:
+                column_values[COL_LTV] = f"{ltv:.2f}"
+            if yield_on_cost is not None:
+                column_values[COL_YIELD_ON_COST] = f"{yield_on_cost:.2f}"
+            if spread is not None:
+                column_values[COL_SPREAD] = f"{spread:.2f}"
+            if reversion_value is not None:
+                column_values[COL_REVERSION_VALUE] = f"{reversion_value:.2f}"
+            if cash_on_cash is not None:
+                column_values[COL_CASH_ON_CASH] = f"{cash_on_cash:.2f}"
             if irr_value is not None:
                 column_values[COL_IRR] = f"{irr_value:.2f}"
             if em is not None:
