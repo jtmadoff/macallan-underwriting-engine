@@ -23,5 +23,5 @@ jobs:
       - name: Run IRR script
         env:
           MONDAY_API_KEY: ${{ secrets.MONDAY_API_KEY }}
-          BOARD_ID: 1234567890  # replace with your Underwriting Engine board ID
+          BOARD_ID: 18320495966
         run: python scripts/irr_engine.py
