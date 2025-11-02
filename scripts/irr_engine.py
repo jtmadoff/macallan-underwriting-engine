@@ -10,16 +10,13 @@ def safe_number_colval(column_value):
     """Extracts the number from a Monday.com numeric column value dict."""
     if not column_value:
         return 0.0
-    # Try value field
     val = column_value.get("value")
     if val:
         try:
-            # Monday wraps numbers as a quoted string, e.g., "\"1234\""
             val = json.loads(val)
             return float(val)
         except Exception:
             pass
-    # Fallback: try parsing text field
     text = column_value.get("text")
     try:
         return float(text.replace(",", "")) if text else 0.0
@@ -55,7 +52,6 @@ def main():
         "Content-Type": "application/json",
     }
 
-    # Use items_page for modern Monday.com API
     query = f"""
     query {{
       boards(ids: {board_id}) {{
@@ -112,13 +108,9 @@ def main():
 
             column_values = {}
             if irr_value is not None:
-                column_values[COL_IRR] = {"number": f"{irr_value:.2f}"}
-            else:
-                column_values[COL_IRR] = {}
+                column_values[COL_IRR] = f"{irr_value:.2f}"
             if em is not None:
-                column_values[COL_EQUITY_MULTIPLE] = {"number": f"{em:.2f}"}
-            else:
-                column_values[COL_EQUITY_MULTIPLE] = {}
+                column_values[COL_EQUITY_MULTIPLE] = f"{em:.2f}"
 
             column_values_str = json.dumps(column_values)
             update_mutation = f"""
