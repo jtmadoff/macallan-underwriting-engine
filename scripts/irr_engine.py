@@ -46,16 +46,18 @@ def main():
         "Authorization": api_key,
         "Content-Type": "application/json",
     }
-    # Request items and their column_values
+    # Use items_page for modern Monday.com API
     query = f"""
     query {{
       boards(ids: {board_id}) {{
-        items {{
-          id
-          name
-          column_values {{
+        items_page(limit: 100) {{
+          items {{
             id
-            text
+            name
+            column_values {{
+              id
+              text
+            }}
           }}
         }}
       }}
@@ -65,11 +67,11 @@ def main():
     data = resp.json()
     print("DEBUG: Board ID used:", board_id)
     print("DEBUG: API response:", json.dumps(data, indent=2))
-    items = data.get("data", {}).get("boards", [])
-    if not items:
-        print("No boards returned or board id incorrect.")
+    boards = data.get("data", {}).get("boards", [])
+    if not boards or "items_page" not in boards[0] or "items" not in boards[0]["items_page"]:
+        print("No boards returned, or items_page/items missing.")
         return
-    items = items[0].get("items", [])
+    items = boards[0]["items_page"]["items"]
 
     # Use internal column IDs
     COL_EQUITY_INVESTMENT = "text_mkx8fh02"
