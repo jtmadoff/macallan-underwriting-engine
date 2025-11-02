@@ -1,7 +1,7 @@
 import os, requests, numpy_financial as npf
 
 api_key = os.getenv("MONDAY_API_KEY")
-board_id = os.getenv("BOARD_ID")
+board_id = os.getenv("18320495966")
 headers = {"Authorization": api_key}
 
 query = f"""
