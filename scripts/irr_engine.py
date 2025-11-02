@@ -89,8 +89,8 @@ def main():
     COL_YEAR_1_CF          = "numeric_mkxary42"
     COL_EQUITY_INVESTMENT  = "numeric_mkxapdxt"
 
-    # Column IDs for calculated outputs
-    COL_CAP_RATE           = "numeric_mkxaasdx8"
+    # Column IDs for calculated outputs (all confirmed from your columns list)
+    COL_CAP_RATE           = "numeric_mkxasdx8"
     COL_LTV                = "numeric_mkxa901y"
     COL_YIELD_ON_COST      = "numeric_mkxagcrj"
     COL_SPREAD             = "numeric_mkxa1nb4"
@@ -98,6 +98,13 @@ def main():
     COL_CASH_ON_CASH       = "numeric_mkxahsqj"
     COL_IRR                = "numeric_mkxav001"
     COL_EQUITY_MULTIPLE    = "numeric_mkxag7qd"
+
+    # Also needed for IRR calculation
+    COL_YEAR_2_CF          = "numeric_mkxavbzw"
+    COL_YEAR_3_CF          = "numeric_mkxadz1f"
+    COL_YEAR_4_CF          = "numeric_mkxasbp9"
+    COL_YEAR_5_CF          = "numeric_mkxarrfz"
+    COL_SALE_PROCEEDS      = "numeric_mkxaaxrp"
 
     for item in items:
         cv_dict = {c["id"]: c for c in item.get("column_values", [])}
@@ -110,6 +117,11 @@ def main():
             exit_cap_rate = safe_number_colval(cv_dict.get(COL_EXIT_CAP_RATE))
             year_1_cf = safe_number_colval(cv_dict.get(COL_YEAR_1_CF))
             equity_investment = abs(safe_number_colval(cv_dict.get(COL_EQUITY_INVESTMENT)))
+            y2 = safe_number_colval(cv_dict.get(COL_YEAR_2_CF))
+            y3 = safe_number_colval(cv_dict.get(COL_YEAR_3_CF))
+            y4 = safe_number_colval(cv_dict.get(COL_YEAR_4_CF))
+            y5 = safe_number_colval(cv_dict.get(COL_YEAR_5_CF))
+            sale = safe_number_colval(cv_dict.get(COL_SALE_PROCEEDS))
 
             # Calculations
             cap_rate = (noi / total_project_cost * 100) if total_project_cost > 0 else None
@@ -120,13 +132,7 @@ def main():
             cash_on_cash = (year_1_cf / equity_investment * 100) if equity_investment > 0 else None
 
             # IRR/Equity Multiple as before
-            y1 = year_1_cf
-            y2 = safe_number_colval(cv_dict.get("numeric_mkxavbzw"))
-            y3 = safe_number_colval(cv_dict.get("numeric_mkxadz1f"))
-            y4 = safe_number_colval(cv_dict.get("numeric_mkxasbp9"))
-            y5 = safe_number_colval(cv_dict.get("numeric_mkxarrfz"))
-            sale = safe_number_colval(cv_dict.get("numeric_mkxaaxrp"))
-            cashflows = [-equity_investment, y1, y2, y3, y4, y5 + sale]
+            cashflows = [-equity_investment, year_1_cf, y2, y3, y4, y5 + sale]
             irr = npf.irr(cashflows)
             irr_value = None if irr is None or (isinstance(irr, float) and math.isnan(irr)) else irr*100.0
             em = sum(cashflows[1:]) / equity_investment if equity_investment > 0 else None
