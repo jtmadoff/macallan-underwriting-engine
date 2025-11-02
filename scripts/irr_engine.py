@@ -63,6 +63,8 @@ def main():
     """
     resp = http_post_with_retries("https://api.monday.com/v2", {"query": query}, headers)
     data = resp.json()
+    print("DEBUG: Board ID used:", board_id)
+    print("DEBUG: API response:", json.dumps(data, indent=2))
     items = data.get("data", {}).get("boards", [])
     if not items:
         print("No boards returned or board id incorrect.")
