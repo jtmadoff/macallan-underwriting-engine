@@ -41,6 +41,7 @@ def main():
     api_key = os.getenv("MONDAY_API_KEY")
     board_id = os.getenv("MONDAY_BOARD_ID")
     dry_run = os.getenv("DRY_RUN") == "1"
+    group_id = "group_mkx8xn8e"  # Underwriting Engine group
 
     if not api_key:
         raise RuntimeError("MONDAY_API_KEY is not set in the environment.")
@@ -52,10 +53,13 @@ def main():
         "Content-Type": "application/json",
     }
 
+    # Query only for items in the specified group
     query = f"""
     query {{
       boards(ids: {board_id}) {{
-        items_page(limit: 100) {{
+        groups(ids: ["{group_id}"]) {{
+          id
+          title
           items {{
             id
             name
@@ -73,12 +77,17 @@ def main():
     resp = http_post_with_retries("https://api.monday.com/v2", {"query": query}, headers)
     data = resp.json()
     print("DEBUG: Board ID used:", board_id)
+    print("DEBUG: Group ID used:", group_id)
     print("DEBUG: API response:", json.dumps(data, indent=2))
     boards = data.get("data", {}).get("boards", [])
-    if not boards or "items_page" not in boards[0] or "items" not in boards[0]["items_page"]:
-        print("No boards returned, or items_page/items missing.")
+    if not boards or "groups" not in boards[0] or not boards[0]["groups"]:
+        print("No groups returned, or group missing.")
         return
-    items = boards[0]["items_page"]["items"]
+    group = boards[0]["groups"][0]
+    if "items" not in group:
+        print("No items returned for group.")
+        return
+    items = group["items"]
 
     # Column IDs for required input fields
     COL_NOI                = "numeric_mkxam1rv"
